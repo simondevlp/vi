@@ -1,0 +1,31 @@
+pub enum Kind {
+    Invalid,
+    Eof,
+    Eol,
+    WordSpaces,
+    Whitespaces,
+    Comment,
+    Word,
+    Decimal,
+    String,
+    Plus,
+    Minus,
+    Asterisk,
+    Slash,
+    Equal,
+    Period,
+    Comma,
+    Greater,
+    Less,
+    LeftBrace,
+    RightBrace,
+    LeftParen,
+    RightParen,
+    LeftBracket,
+    RightBracket,
+}
+
+pub struct Lexeme {
+    pub kind: Kind,
+    pub len: u32,
+}
