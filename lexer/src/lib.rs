@@ -31,8 +31,10 @@ mod tests {
     }
 
     #[test]
-    fn empty() {
+    fn empty_repeated_eofs() {
         let mut lexer = Lexer::new("");
+        assert_eof!(lexer);
+        assert_eof!(lexer);
         assert_eof!(lexer);
     }
 
