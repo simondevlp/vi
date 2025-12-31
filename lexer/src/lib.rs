@@ -92,4 +92,13 @@ mod tests {
         assert_lexeme!(lexer, Kind::Word, 4);
         assert_eof!(lexer);
     }
+
+    #[test]
+    fn invalid() {
+        let mut lexer = Lexer::new("@$%");
+        assert_lexeme!(lexer, Kind::Invalid, 1);
+        assert_lexeme!(lexer, Kind::Invalid, 1);
+        assert_lexeme!(lexer, Kind::Invalid, 1);
+        assert_eof!(lexer);
+    }
 }
