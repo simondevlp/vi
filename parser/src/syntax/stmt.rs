@@ -38,7 +38,6 @@ impl ChoStatement {
         if !parser.cur_lexeme_snippet_is(Keyword::Cho.as_str()) {
             return Ok(None);
         }
-        parser.next_lexeme();
         parser.next_non_ws_lexeme();
         let Some(lhs) = Ident::accept(parser) else {
             return Err(Diags::Err(Error::UnexpectedLexeme {
