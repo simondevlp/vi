@@ -12,6 +12,7 @@ impl Programme {
     pub fn accept(parser: &mut Parser) -> Result<Self, Diags> {
         let mut statements = Vec::new();
         loop {
+            parser.next_non_ws_lexeme();
             match Statement::accept(parser) {
                 Ok(Some(stmt)) => statements.push(stmt),
                 Ok(None) => break,
