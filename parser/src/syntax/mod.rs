@@ -3,6 +3,7 @@ use crate::{diag::Diags, parser::Parser, syntax::stmt::Statement};
 pub mod stmt;
 pub mod terminal;
 
+#[derive(Debug)]
 pub struct Programme {
     pub statements: Vec<Statement>,
 }

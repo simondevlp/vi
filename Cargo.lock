@@ -12,3 +12,10 @@ version = "0.1.0"
 dependencies = [
  "lexer",
 ]
+
+[[package]]
+name = "vi"
+version = "0.1.0"
+dependencies = [
+ "parser",
+]

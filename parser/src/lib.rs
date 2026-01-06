@@ -1,5 +1,5 @@
 mod diag;
-mod parser;
+pub mod parser;
 mod syntax;
 
 #[cfg(test)]
