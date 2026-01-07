@@ -8,17 +8,17 @@ use crate::{
 
 #[derive(Debug)]
 pub enum Statement {
+    BlankStatement,
     Cho(ChoStatement),
 }
 
 impl Statement {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diags> {
-        if matches!(parser.cur_lexeme.kind, Kind::Eof) {
-            return Ok(None);
-        }
-        if parser.cur_lexeme_snippet_is(Keyword::Cho.as_str()) {
+    pub fn accept(parser: &mut Parser) -> Result<Self, Diags> {
+        if matches!(parser.cur_lexeme.kind, Kind::Eol | Kind::Eof) {
+            return Ok(Statement::BlankStatement);
+        } else if parser.cur_lexeme_snippet_is(Keyword::Cho.as_str()) {
             let cho_stmt = ChoStatement::accept(parser)?;
-            Ok(Some(Statement::Cho(cho_stmt.unwrap())))
+            Ok(Statement::Cho(cho_stmt))
         } else {
             Err(Diags::Err(Error::UnexpectedToken {
                 expected: vec![Keyword::Cho.as_str().to_string()],
@@ -34,9 +34,12 @@ pub struct ChoStatement {
 }
 
 impl ChoStatement {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diags> {
-        if !parser.cur_lexeme_snippet_is(Keyword::Cho.as_str()) {
-            return Ok(None);
+    pub fn accept(parser: &mut Parser) -> Result<Self, Diags> {
+        if parser.cur_lexeme_snippet() != Keyword::Cho.as_str() {
+            return Err(Diags::Err(Error::UnexpectedToken {
+                expected: vec![Keyword::Cho.as_str().to_string()],
+                found: parser.cur_lexeme_snippet().to_string(),
+            }));
         }
         parser.next_non_ws_lexeme();
         let Some(lhs) = Ident::accept(parser) else {
@@ -45,6 +48,6 @@ impl ChoStatement {
                 found: parser.cur_lexeme.kind,
             }));
         };
-        Ok(Some(ChoStatement { lhs }))
+        Ok(ChoStatement { lhs })
     }
 }

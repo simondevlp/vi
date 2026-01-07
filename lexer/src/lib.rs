@@ -6,7 +6,7 @@ macro_rules! assert_lexeme {
     ($lexeme:expr, $kind:pat, $len:expr) => {{
         assert!(
             matches!($lexeme.kind, $kind) && $lexeme.len == $len,
-            "Expected {:?} with length {}, got {:?} with length {}",
+            "Expected {} with length {}, got {} with length {}",
             stringify!($kind),
             $len,
             $lexeme.kind,

@@ -35,18 +35,29 @@ impl<'a> Parser<'a> {
         &self.cur_lexeme
     }
 
+    pub fn skip_ws_if_any(&mut self) -> &Lexeme {
+        match self.cur_lexeme.kind {
+            lexeme::Kind::Whitespaces | lexeme::Kind::WordSpaces => self.next_non_ws_lexeme(),
+            _ => &self.cur_lexeme,
+        }
+    }
+
     pub fn next_non_ws_lexeme(&mut self) -> &Lexeme {
         loop {
             self.next_lexeme();
             match self.cur_lexeme.kind {
-                lexer::lexeme::Kind::Whitespaces | lexer::lexeme::Kind::WordSpaces => continue,
+                lexer::lexeme::Kind::Whitespaces | lexer::lexeme::Kind::WordSpaces => {}
                 _ => return &self.cur_lexeme,
             }
         }
     }
 
+    pub fn get_snippet(&self, start: u32, len: u32) -> &str {
+        &self.input[start as usize..(start + len) as usize]
+    }
+
     pub fn cur_lexeme_snippet(&self) -> &str {
-        &self.input[self.cur_pos as usize..(self.cur_pos + self.cur_lexeme.len) as usize]
+        self.get_snippet(self.cur_pos, self.cur_lexeme.len)
     }
 
     pub fn cur_lexeme_snippet_is(&self, expected: &str) -> bool {
