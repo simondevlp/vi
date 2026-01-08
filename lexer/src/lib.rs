@@ -76,6 +76,13 @@ pub mod tests {
     }
 
     #[test]
+    fn float() {
+        let mut lexer = Lexer::new("123.456");
+        assert_lexer_lexeme!(lexer, Kind::Float, 7);
+        assert_lexer_eof!(lexer);
+    }
+
+    #[test]
     fn decimal() {
         let mut lexer = Lexer::new("123456");
         assert_lexer_lexeme!(lexer, Kind::Decimal, 6);

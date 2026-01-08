@@ -211,7 +211,14 @@ impl<'a> Lexer<'a> {
             }
             Some('0'..='9') => {
                 self.advance_char_while(|c| matches!(c, '0'..='9'));
-                Kind::Decimal
+                match self.peek_char() {
+                    Some('.') => {
+                        self.next_char();
+                        self.advance_char_while(|c| matches!(c, '0'..='9'));
+                        Kind::Float
+                    }
+                    _ => Kind::Decimal,
+                }
             }
             Some('+') => Kind::Plus,
             Some('-') => Kind::Minus,
