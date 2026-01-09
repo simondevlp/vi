@@ -1,9 +1,12 @@
 use lexer::lexeme;
 
 use crate::{
-    diag::{Diag, DiagData, Error, TokenString},
+    diag::{Diag, DiagData, Error},
     parser::Parser,
-    syntax::terminal::{Ident, Keyword, Literal},
+    syntax::expr::{
+        Expr,
+        terminal::{Ident, Keyword},
+    },
 };
 
 #[derive(Debug)]
@@ -19,10 +22,10 @@ impl Statement {
         } else {
             Err(Diag {
                 line: parser.cur_line,
-                data: DiagData::Err(Error::UnexpectedToken {
-                    expected: vec![Keyword::Cho.to_token_string()],
-                    found: TokenString::from_str(parser.cur_lexeme_snippet()),
+                data: DiagData::Err(Error::MiscExpecting {
+                    expected: "a statement".to_string(),
                 }),
+                span: parser.cur_span(),
             })
         }
     }
@@ -31,7 +34,7 @@ impl Statement {
 #[derive(Debug)]
 pub struct ChoStatement {
     pub lhs: Ident,
-    pub rhs: Option<Literal>,
+    pub rhs: Option<Expr>,
 }
 
 impl ChoStatement {
@@ -39,20 +42,20 @@ impl ChoStatement {
         if parser.cur_lexeme_snippet() != Keyword::Cho.as_str() {
             return Err(Diag {
                 line: parser.cur_line,
-                data: DiagData::Err(Error::UnexpectedToken {
-                    expected: vec![Keyword::Cho.to_token_string()],
-                    found: TokenString::from_str(parser.cur_lexeme_snippet()),
+                data: DiagData::Err(Error::MiscExpecting {
+                    expected: "'cho'".to_string(),
                 }),
+                span: parser.cur_span(),
             });
         }
-        parser.skip_ws_if_any(true);
+        parser.next_non_ws_lexeme(true); // consumes 'cho'
         let Some(lhs) = Ident::accept(parser) else {
             return Err(Diag {
                 line: parser.cur_line,
-                data: DiagData::Err(Error::UnexpectedLexeme {
-                    expected: vec![lexeme::Kind::Word],
-                    found: parser.cur_lexeme.kind,
+                data: DiagData::Err(Error::MiscExpecting {
+                    expected: "an identifier".to_string(),
                 }),
+                span: parser.cur_span(),
             });
         };
         parser.skip_ws_if_any(false);
@@ -60,19 +63,7 @@ impl ChoStatement {
             return Ok(ChoStatement { lhs, rhs: None });
         }
         parser.next_non_ws_lexeme(true); // consumes '='
-        let Some(rhs) = Literal::accept(parser) else {
-            return Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::UnexpectedLexeme {
-                    expected: vec![
-                        lexeme::Kind::Word,
-                        lexeme::Kind::Float,
-                        lexeme::Kind::Decimal,
-                    ],
-                    found: parser.cur_lexeme.kind,
-                }),
-            });
-        };
+        let rhs = Expr::accept(parser)?;
         Ok(ChoStatement {
             lhs,
             rhs: Some(rhs),

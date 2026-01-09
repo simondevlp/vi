@@ -1,6 +1,6 @@
 use lexer::lexeme::Kind;
 
-use crate::{diag::TokenString, parser::Parser, syntax::Span};
+use crate::{parser::Parser, syntax::Span};
 
 #[derive(Debug)]
 pub enum Keyword {
@@ -13,10 +13,6 @@ impl Keyword {
             Keyword::Cho => "cho",
         }
     }
-
-    pub fn to_token_string(&self) -> TokenString {
-        TokenString::from_str(self.as_str())
-    }
 }
 
 #[derive(Debug)]
@@ -25,12 +21,15 @@ pub struct Ident(pub Span);
 pub struct Float(pub Span);
 #[derive(Debug)]
 pub struct Decimal(pub Span);
+#[derive(Debug)]
+pub struct DoubleQuotedString(pub Span);
 
 #[derive(Debug)]
 pub enum Literal {
     Ident(Ident),
     Float(Float),
     Decimal(Decimal),
+    DoubleQuotedString(DoubleQuotedString),
 }
 
 impl Literal {
@@ -75,7 +74,7 @@ impl Ident {
                         }
                     }
                 }
-                Some(Self(Span { start, len }))
+                Some(Self((start, len)))
             }
             _ => None,
         }
@@ -86,10 +85,7 @@ impl Float {
     pub fn accept(parser: &mut Parser) -> Option<Self> {
         match parser.cur_lexeme.kind {
             Kind::Float => {
-                let span = Span {
-                    start: parser.cur_pos,
-                    len: parser.cur_lexeme.len,
-                };
+                let span = parser.cur_span();
                 parser.next_lexeme();
                 Some(Self(span))
             }
@@ -102,10 +98,20 @@ impl Decimal {
     pub fn accept(parser: &mut Parser) -> Option<Self> {
         match parser.cur_lexeme.kind {
             Kind::Decimal => {
-                let span = Span {
-                    start: parser.cur_pos,
-                    len: parser.cur_lexeme.len,
-                };
+                let span = parser.cur_span();
+                parser.next_lexeme();
+                Some(Self(span))
+            }
+            _ => None,
+        }
+    }
+}
+
+impl DoubleQuotedString {
+    pub fn accept(parser: &mut Parser) -> Option<Self> {
+        match parser.cur_lexeme.kind {
+            Kind::String => {
+                let span = parser.cur_span();
                 parser.next_lexeme();
                 Some(Self(span))
             }

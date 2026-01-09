@@ -2,17 +2,19 @@ use std::fmt::Display;
 
 use lexer::lexeme;
 
-pub struct TokenString(pub String);
-
-impl TokenString {
-    pub fn from_str(s: &str) -> Self {
-        TokenString(s.to_string())
-    }
+pub enum BracketKind {
+    Parenthesis,
+    Brace,
+    Bracket,
 }
 
-impl Display for TokenString {
+impl Display for BracketKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "'{}'", self.0)
+        match self {
+            Self::Parenthesis => write!(f, "parenthesis"),
+            Self::Brace => write!(f, "brace"),
+            Self::Bracket => write!(f, "bracket"),
+        }
     }
 }
 
@@ -21,9 +23,11 @@ pub enum Error {
         expected: Vec<lexeme::Kind>,
         found: lexeme::Kind,
     },
-    UnexpectedToken {
-        expected: Vec<TokenString>,
-        found: TokenString,
+    MiscExpecting {
+        expected: String,
+    },
+    BracketNotClosed {
+        kind: BracketKind,
     },
 }
 
@@ -52,13 +56,11 @@ impl Display for DiagData {
                         found
                     )
                 }
-                Error::UnexpectedToken { expected, found } => {
-                    write!(
-                        f,
-                        "Unexpected token: expected {}, found {}",
-                        Self::print_vec(expected),
-                        found
-                    )
+                Error::MiscExpecting { expected } => {
+                    write!(f, "Expecting {}", expected)
+                }
+                Error::BracketNotClosed { kind } => {
+                    write!(f, "This {} has not been closed.", kind)
                 }
             },
         }
@@ -71,6 +73,7 @@ pub enum DiagData {
 
 pub struct Diag {
     pub line: u32,
+    pub span: (u32, u32),
     pub data: DiagData,
 }
 

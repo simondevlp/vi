@@ -2,8 +2,8 @@ use lexer::lexeme;
 
 use crate::{diag::Diag, parser::Parser, syntax::stmt::Statement};
 
+pub mod expr;
 pub mod stmt;
-pub mod terminal;
 
 #[derive(Debug)]
 pub struct Programme {
@@ -19,17 +19,10 @@ impl Programme {
             if matches!(parser.cur_lexeme.kind, lexeme::Kind::Eof) {
                 break;
             }
-            match Statement::accept(parser) {
-                Ok(stmt) => statements.push(stmt),
-                Err(e) => return Err(e),
-            }
+            statements.push(Statement::accept(parser)?);
         }
         Ok(Programme { statements })
     }
 }
 
-#[derive(Debug)]
-pub struct Span {
-    pub start: u32,
-    pub len: u32,
-}
+pub type Span = (u32, u32);

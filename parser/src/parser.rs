@@ -73,6 +73,10 @@ impl<'a> Parser<'a> {
         self.cur_lexeme_snippet() == expected
     }
 
+    pub fn cur_span(&self) -> (u32, u32) {
+        (self.cur_pos, self.cur_lexeme.len)
+    }
+
     pub fn visit_programme(&mut self) -> Option<Programme> {
         let status = Programme::accept(self);
         match status {
