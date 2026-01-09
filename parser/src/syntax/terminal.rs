@@ -1,5 +1,7 @@
 use lexer::lexeme::Kind;
 
+use crate::{diag::TokenString, parser::Parser, syntax::Span};
+
 #[derive(Debug)]
 pub enum Keyword {
     Cho,
@@ -11,20 +13,43 @@ impl Keyword {
             Keyword::Cho => "cho",
         }
     }
+
+    pub fn to_token_string(&self) -> TokenString {
+        TokenString::from_str(self.as_str())
+    }
 }
 
 #[derive(Debug)]
-pub struct Ident {
-    pub start: u32,
-    pub len: u32,
+pub struct Ident(pub Span);
+#[derive(Debug)]
+pub struct Float(pub Span);
+#[derive(Debug)]
+pub struct Decimal(pub Span);
+
+#[derive(Debug)]
+pub enum Literal {
+    Ident(Ident),
+    Float(Float),
+    Decimal(Decimal),
+}
+
+impl Literal {
+    pub fn accept(parser: &mut Parser) -> Option<Self> {
+        if let Some(ident) = Ident::accept(parser) {
+            return Some(Literal::Ident(ident));
+        }
+        if let Some(float) = Float::accept(parser) {
+            return Some(Literal::Float(float));
+        }
+        if let Some(decimal) = Decimal::accept(parser) {
+            return Some(Literal::Decimal(decimal));
+        }
+        None
+    }
 }
 
 impl Ident {
-    pub fn new(start: u32, len: u32) -> Self {
-        Self { start, len }
-    }
-
-    pub fn accept(parser: &mut crate::parser::Parser) -> Option<Self> {
+    pub fn accept(parser: &mut Parser) -> Option<Self> {
         match parser.cur_lexeme.kind {
             Kind::Word => {
                 let start = parser.cur_pos;
@@ -50,7 +75,39 @@ impl Ident {
                         }
                     }
                 }
-                Some(Self::new(start, len))
+                Some(Self(Span { start, len }))
+            }
+            _ => None,
+        }
+    }
+}
+
+impl Float {
+    pub fn accept(parser: &mut Parser) -> Option<Self> {
+        match parser.cur_lexeme.kind {
+            Kind::Float => {
+                let span = Span {
+                    start: parser.cur_pos,
+                    len: parser.cur_lexeme.len,
+                };
+                parser.next_lexeme();
+                Some(Self(span))
+            }
+            _ => None,
+        }
+    }
+}
+
+impl Decimal {
+    pub fn accept(parser: &mut Parser) -> Option<Self> {
+        match parser.cur_lexeme.kind {
+            Kind::Decimal => {
+                let span = Span {
+                    start: parser.cur_pos,
+                    len: parser.cur_lexeme.len,
+                };
+                parser.next_lexeme();
+                Some(Self(span))
             }
             _ => None,
         }

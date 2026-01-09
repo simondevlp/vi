@@ -10,7 +10,8 @@ pub struct Parser<'a> {
     pub lexer: Lexer<'a>,
     pub cur_pos: u32,
     pub cur_lexeme: Lexeme,
-    diag: Vec<crate::diag::Diags>,
+    pub cur_line: u32,
+    diag: Vec<crate::diag::Diag>,
 }
 
 impl<'a> Parser<'a> {
@@ -23,6 +24,7 @@ impl<'a> Parser<'a> {
                 kind: lexeme::Kind::Invalid,
                 len: 0,
             },
+            cur_line: 1,
             diag: Vec::new(),
         };
         parser.cur_lexeme = parser.lexer.next();
@@ -32,21 +34,28 @@ impl<'a> Parser<'a> {
     pub fn next_lexeme(&mut self) -> &Lexeme {
         self.cur_pos += self.cur_lexeme.len;
         self.cur_lexeme = self.lexer.next();
+        if matches!(self.cur_lexeme.kind, lexeme::Kind::Eol) {
+            self.cur_line += 1;
+        }
         &self.cur_lexeme
     }
 
-    pub fn skip_ws_if_any(&mut self) -> &Lexeme {
+    pub fn skip_ws_if_any(&mut self, including_eol: bool) -> &Lexeme {
         match self.cur_lexeme.kind {
-            lexeme::Kind::Whitespaces | lexeme::Kind::WordSpaces => self.next_non_ws_lexeme(),
+            lexeme::Kind::Whitespaces | lexeme::Kind::WordSpaces => {
+                self.next_non_ws_lexeme(including_eol)
+            }
+            lexeme::Kind::Eol if including_eol => self.next_non_ws_lexeme(including_eol),
             _ => &self.cur_lexeme,
         }
     }
 
-    pub fn next_non_ws_lexeme(&mut self) -> &Lexeme {
+    pub fn next_non_ws_lexeme(&mut self, including_eol: bool) -> &Lexeme {
         loop {
             self.next_lexeme();
             match self.cur_lexeme.kind {
-                lexer::lexeme::Kind::Whitespaces | lexer::lexeme::Kind::WordSpaces => {}
+                lexeme::Kind::Whitespaces | lexeme::Kind::WordSpaces => {}
+                lexeme::Kind::Eol if including_eol => {}
                 _ => return &self.cur_lexeme,
             }
         }
@@ -77,7 +86,7 @@ impl<'a> Parser<'a> {
 
     pub fn print_diags(&self) {
         for diag in &self.diag {
-            diag.print();
+            eprintln!("{}", diag);
         }
     }
 }
