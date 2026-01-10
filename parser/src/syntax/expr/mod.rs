@@ -94,36 +94,57 @@ impl PrefixedExpr {
 #[derive(Debug)]
 pub enum TerminalExpr {
     Literal(Literal),
-    Grouped(Box<Expr>),
+    Tuple(TupleExpr),
+}
+
+#[derive(Debug)]
+pub struct TupleExpr(pub Vec<Expr>);
+
+impl TupleExpr {
+    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
+        parser.next_non_ws_lexeme(true); // consume '('
+        let mut exprs = Vec::new();
+        loop {
+            let Ok(expr) = Expr::accept(parser) else {
+                break;
+            };
+            exprs.push(expr);
+            parser.skip_ws_if_any(true);
+            match parser.cur_lexeme.kind {
+                lexeme::Kind::Comma => {
+                    parser.next_non_ws_lexeme(true); // consume ','
+                }
+                _ => break,
+            }
+        }
+        if !matches!(parser.cur_lexeme.kind, lexeme::Kind::RightParen) {
+            return Err(Diag {
+                line: parser.cur_line,
+                data: DiagData::Err(Error::BracketNotClosed {
+                    kind: BracketKind::Parenthesis,
+                }),
+                span: (parser.cur_pos, 1),
+            });
+        }
+        parser.next_non_ws_lexeme(true); // consume ')'
+        Ok(TupleExpr(exprs))
+    }
 }
 
 impl TerminalExpr {
     pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        if let Some(lit) = Literal::accept(parser) {
-            return Ok(TerminalExpr::Literal(lit));
+        if let Ok(lit) = Literal::accept(parser) {
+            Ok(TerminalExpr::Literal(lit))
+        } else if matches!(parser.cur_lexeme.kind, lexeme::Kind::LeftParen) {
+            Ok(TerminalExpr::Tuple(TupleExpr::accept(parser)?))
+        } else {
+            Err(Diag {
+                line: parser.cur_line,
+                data: DiagData::Err(Error::MiscExpecting {
+                    expected: "an expression".to_string(),
+                }),
+                span: parser.cur_span(),
+            })
         }
-        if matches!(parser.cur_lexeme.kind, lexeme::Kind::LeftParen) {
-            parser.next_non_ws_lexeme(true); // consume '('
-            let expr = Expr::accept(parser)?;
-            parser.skip_ws_if_any(true);
-            if !matches!(parser.cur_lexeme.kind, lexeme::Kind::RightParen) {
-                return Err(Diag {
-                    line: parser.cur_line,
-                    data: DiagData::Err(Error::BracketNotClosed {
-                        kind: BracketKind::Parenthesis,
-                    }),
-                    span: (parser.cur_pos, 1),
-                });
-            }
-            parser.next_non_ws_lexeme(true); // consume ')'
-            return Ok(TerminalExpr::Grouped(Box::new(expr)));
-        }
-        Err(Diag {
-            line: parser.cur_line,
-            data: DiagData::Err(Error::MiscExpecting {
-                expected: "an expression".to_string(),
-            }),
-            span: parser.cur_span(),
-        })
     }
 }
