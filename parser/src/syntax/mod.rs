@@ -1,5 +1,3 @@
-use lexer::lexeme;
-
 use crate::{diag::Diag, parser::Parser, syntax::stmt::Statement};
 
 pub mod expr;
@@ -13,13 +11,13 @@ pub struct Programme {
 impl Programme {
     pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
         let mut statements = Vec::new();
-        parser.skip_ws_if_any(true);
         loop {
             parser.skip_ws_if_any(true);
-            if matches!(parser.cur_lexeme.kind, lexeme::Kind::Eof) {
+            if let Some(stmt) = Statement::accept(parser)? {
+                statements.push(stmt);
+            } else {
                 break;
             }
-            statements.push(Statement::accept(parser)?);
         }
         Ok(Programme { statements })
     }

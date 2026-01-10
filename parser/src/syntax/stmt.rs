@@ -16,23 +16,13 @@ pub enum Statement {
 }
 
 impl Statement {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        if matches!(parser.cur_lexeme.kind, lexeme::Kind::Word) {
-            if parser.cur_lexeme_snippet_is(Keyword::Cho.as_str()) {
-                let cho_stmt = ChoStatement::accept(parser)?;
-                Ok(Statement::Cho(cho_stmt))
-            } else {
-                let invoc_stmt = InvocationStatement::accept(parser)?;
-                Ok(Statement::Invocation(invoc_stmt))
-            }
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        if let Some(cho_stmt) = ChoStatement::accept(parser)? {
+            Ok(Some(Statement::Cho(cho_stmt)))
+        } else if let Some(invoc_stmt) = InvocationStatement::accept(parser)? {
+            Ok(Some(Statement::Invocation(invoc_stmt)))
         } else {
-            Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "a statement".to_string(),
-                }),
-                span: parser.cur_span(),
-            })
+            Ok(None)
         }
     }
 }
@@ -45,19 +35,39 @@ pub struct ChoStatement {
 }
 
 impl ChoStatement {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        let kw = Keyword::accept(parser, Keyword::Cho)?;
-        let lhs = Ident::accept(parser)?;
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        let Some(kw) = Keyword::accept(parser, Keyword::Cho)? else {
+            return Ok(None);
+        };
+        let Some(lhs) = Ident::accept(parser)? else {
+            return Err(Diag {
+                line: parser.cur_line,
+                span: parser.cur_span(),
+                data: DiagData::Err(Error::MiscExpecting {
+                    expected: "the left-hand side for declaration".to_string(),
+                }),
+            });
+        };
         parser.skip_ws_if_any(false);
-        if !matches!(parser.cur_lexeme.kind, lexeme::Kind::Equal) {
-            return Ok(ChoStatement { kw, lhs, rhs: None });
-        }
-        parser.next_non_ws_lexeme(true); // consumes '='
-        let rhs = Expr::accept(parser)?;
-        Ok(ChoStatement {
-            kw,
-            lhs,
-            rhs: Some(rhs),
+        Ok(match parser.cur_lexeme.kind {
+            lexeme::Kind::Equal => {
+                parser.next_non_ws_lexeme(true); // consume '='
+                let Some(rhs) = Expr::accept(parser)? else {
+                    return Err(Diag {
+                        line: parser.cur_line,
+                        span: parser.cur_span(),
+                        data: DiagData::Err(Error::MiscExpecting {
+                            expected: "the right-hand side expression for assignment".to_string(),
+                        }),
+                    });
+                };
+                Some(ChoStatement {
+                    kw,
+                    lhs,
+                    rhs: Some(rhs),
+                })
+            }
+            _ => Some(ChoStatement { kw, lhs, rhs: None }),
         })
     }
 }
@@ -69,9 +79,19 @@ pub struct InvocationStatement {
 }
 
 impl InvocationStatement {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        let callee = Ident::accept(parser)?;
-        let tuple = TupleExpr::accept(parser)?;
-        Ok(InvocationStatement { callee, tuple })
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        let Some(callee) = Ident::accept(parser)? else {
+            return Ok(None);
+        };
+        let Some(tuple) = TupleExpr::accept(parser)? else {
+            return Err(Diag {
+                line: parser.cur_line,
+                span: (parser.cur_pos, 1),
+                data: DiagData::Err(Error::MiscExpecting {
+                    expected: "a tuple of arguments for invocation".to_string(),
+                }),
+            });
+        };
+        Ok(Some(InvocationStatement { callee, tuple }))
     }
 }

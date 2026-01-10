@@ -1,10 +1,6 @@
-use lexer::lexeme::{self, Kind};
+use lexer::lexeme::Kind;
 
-use crate::{
-    diag::{Diag, DiagData, Error},
-    parser::Parser,
-    syntax::Span,
-};
+use crate::{diag::Diag, parser::Parser, syntax::Span};
 
 #[derive(Debug)]
 pub enum Keyword {
@@ -18,20 +14,14 @@ impl Keyword {
         }
     }
 
-    pub fn accept(parser: &mut Parser, kw: Self) -> Result<Self, Diag> {
-        match parser.cur_lexeme.kind {
+    pub fn accept(parser: &mut Parser, kw: Self) -> Result<Option<Self>, Diag> {
+        Ok(match parser.cur_lexeme.kind {
             Kind::Word if parser.cur_lexeme_snippet_is(kw.as_str()) => {
                 parser.next_non_ws_lexeme(true);
-                Ok(kw)
+                Some(kw)
             }
-            _ => Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: format!("'{}'", kw.as_str()),
-                }),
-                span: parser.cur_span(),
-            }),
-        }
+            _ => None,
+        })
     }
 }
 
@@ -53,28 +43,24 @@ pub enum Literal {
 }
 
 impl Literal {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        match parser.cur_lexeme.kind {
-            lexeme::Kind::Word => Ok(Literal::Ident(Ident::accept(parser)?)),
-            lexeme::Kind::Float => Ok(Literal::Float(Float::accept(parser)?)),
-            lexeme::Kind::Decimal => Ok(Literal::Decimal(Decimal::accept(parser)?)),
-            lexeme::Kind::String => Ok(Literal::DoubleQuotedString(DoubleQuotedString::accept(
-                parser,
-            )?)),
-            _ => Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "a literal".to_string(),
-                }),
-                span: parser.cur_span(),
-            }),
-        }
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        Ok(if let Some(ident) = Ident::accept(parser)? {
+            Some(Literal::Ident(ident))
+        } else if let Some(float) = Float::accept(parser)? {
+            Some(Literal::Float(float))
+        } else if let Some(decimal) = Decimal::accept(parser)? {
+            Some(Literal::Decimal(decimal))
+        } else if let Some(dqs) = DoubleQuotedString::accept(parser)? {
+            Some(Literal::DoubleQuotedString(dqs))
+        } else {
+            None
+        })
     }
 }
 
 impl Ident {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        match parser.cur_lexeme.kind {
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        Ok(match parser.cur_lexeme.kind {
             Kind::Word => {
                 let start = parser.cur_pos;
                 let mut len = parser.cur_lexeme.len;
@@ -99,72 +85,48 @@ impl Ident {
                         }
                     }
                 }
-                Ok(Self((start, len)))
+                Some(Self((start, len)))
             }
-            _ => Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "an identifier".to_string(),
-                }),
-                span: parser.cur_span(),
-            }),
-        }
+            _ => None,
+        })
     }
 }
 
 impl Float {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        match parser.cur_lexeme.kind {
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        Ok(match parser.cur_lexeme.kind {
             Kind::Float => {
                 let span = parser.cur_span();
                 parser.next_lexeme();
-                Ok(Self(span))
+                Some(Self(span))
             }
-            _ => Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "a float literal".to_string(),
-                }),
-                span: parser.cur_span(),
-            }),
-        }
+            _ => None,
+        })
     }
 }
 
 impl Decimal {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        match parser.cur_lexeme.kind {
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        Ok(match parser.cur_lexeme.kind {
             Kind::Decimal => {
                 let span = parser.cur_span();
                 parser.next_lexeme();
-                Ok(Self(span))
+                Some(Self(span))
             }
-            _ => Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "a decimal literal".to_string(),
-                }),
-                span: parser.cur_span(),
-            }),
-        }
+            _ => None,
+        })
     }
 }
 
 impl DoubleQuotedString {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
-        match parser.cur_lexeme.kind {
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        Ok(match parser.cur_lexeme.kind {
             Kind::String => {
                 let span = parser.cur_span();
                 parser.next_lexeme();
-                Ok(Self(span))
+                Some(Self(span))
             }
-            _ => Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "a double quoted string literal".to_string(),
-                }),
-                span: parser.cur_span(),
-            }),
-        }
+            _ => None,
+        })
     }
 }
