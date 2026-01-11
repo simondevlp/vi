@@ -42,8 +42,8 @@ impl Acceptor for ChoStatement {
         let Some(lhs) = Ident::accept(parser)? else {
             return Err(Diag {
                 line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "the left-hand side for declaration".to_string(),
+                data: DiagData::Err(Error::Expecting {
+                    expected: "the left-hand side for declaration",
                 }),
             });
         };
@@ -54,8 +54,8 @@ impl Acceptor for ChoStatement {
                 let Some(rhs) = Expr::accept(parser)? else {
                     return Err(Diag {
                         line: parser.cur_line,
-                        data: DiagData::Err(Error::MiscExpecting {
-                            expected: "the right-hand side expression for assignment".to_string(),
+                        data: DiagData::Err(Error::Expecting {
+                            expected: "the right-hand side expression for assignment",
                         }),
                     });
                 };
@@ -78,8 +78,8 @@ impl Acceptor for InvocationStatement {
             if path_expr.rhs.is_empty() {
                 Err(Diag {
                     line: parser.cur_line,
-                    data: DiagData::Err(Error::MiscExpecting {
-                        expected: "a statement".to_string(),
+                    data: DiagData::Err(Error::Expecting {
+                        expected: "a statement",
                     }),
                 })
             } else {

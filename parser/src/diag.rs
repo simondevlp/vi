@@ -13,7 +13,7 @@ impl Display for BracketKind {
 }
 
 pub enum Error {
-    MiscExpecting { expected: String },
+    Expecting { expected: &'static str },
     BracketNotClosed { kind: BracketKind },
 }
 
@@ -21,7 +21,7 @@ impl Display for DiagData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Err(error) => match error {
-                Error::MiscExpecting { expected } => {
+                Error::Expecting { expected } => {
                     write!(f, "Expecting {}", expected)
                 }
                 Error::BracketNotClosed { kind } => {

@@ -44,8 +44,8 @@ impl Acceptor for AddAffixedExpr {
             let Some(expr) = MulAffixedExpr::accept(parser)? else {
                 return Err(Diag {
                     line: parser.cur_line,
-                    data: DiagData::Err(Error::MiscExpecting {
-                        expected: "an expression after operator".to_string(),
+                    data: DiagData::Err(Error::Expecting {
+                        expected: "an expression after operator",
                     }),
                 });
             };
@@ -78,8 +78,8 @@ impl Acceptor for MulAffixedExpr {
             let Some(expr) = PrefixedExpr::accept(parser)? else {
                 return Err(Diag {
                     line: parser.cur_line,
-                    data: DiagData::Err(Error::MiscExpecting {
-                        expected: "an expression after operator".to_string(),
+                    data: DiagData::Err(Error::Expecting {
+                        expected: "an expression after operator",
                     }),
                 });
             };
@@ -136,8 +136,8 @@ impl Acceptor for PathExpr {
             let Some(field) = Field::accept(parser)? else {
                 return Err(Diag {
                     line: parser.cur_line,
-                    data: DiagData::Err(Error::MiscExpecting {
-                        expected: "a field after '.'".to_string(),
+                    data: DiagData::Err(Error::Expecting {
+                        expected: "a field after '.'",
                     }),
                 });
             };
