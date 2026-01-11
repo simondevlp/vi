@@ -1,4 +1,4 @@
-use crate::{diag::Diag, parser::Parser, syntax::stmt::Statement};
+use crate::{accept::Acceptor, diag::Diag, parser::Parser, syntax::stmt::Statement};
 
 pub mod expr;
 pub mod stmt;
@@ -8,8 +8,8 @@ pub struct Programme {
     pub statements: Vec<Statement>,
 }
 
-impl Programme {
-    pub fn accept(parser: &mut Parser) -> Result<Self, Diag> {
+impl Acceptor for Programme {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         let mut statements = Vec::new();
         loop {
             parser.skip_ws_if_any(true);
@@ -19,7 +19,7 @@ impl Programme {
                 break;
             }
         }
-        Ok(Programme { statements })
+        Ok(Some(Programme { statements }))
     }
 }
 

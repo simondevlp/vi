@@ -3,7 +3,7 @@ use lexer::{
     lexer::Lexer,
 };
 
-use crate::syntax::Programme;
+use crate::{accept::Acceptor, syntax::Programme};
 
 pub struct Parser<'a> {
     input: &'a str,
@@ -80,7 +80,7 @@ impl<'a> Parser<'a> {
     pub fn visit_programme(&mut self) -> Option<Programme> {
         let status = Programme::accept(self);
         match status {
-            Ok(prog) => Some(prog),
+            Ok(prog) => prog,
             Err(diags) => {
                 self.diag.push(diags);
                 None

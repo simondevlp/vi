@@ -1,6 +1,7 @@
 use lexer::lexeme;
 
 use crate::{
+    accept::Acceptor,
     diag::{Diag, DiagData, Error},
     parser::Parser,
     syntax::expr::terminal::{Field, TerminalExpr},
@@ -11,8 +12,8 @@ pub mod terminal;
 #[derive(Debug)]
 pub struct Expr(pub AddAffixedExpr);
 
-impl Expr {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for Expr {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match AddAffixedExpr::accept(parser)? {
             Some(add_expr) => Some(Expr(add_expr)),
             None => None,
@@ -26,8 +27,8 @@ pub struct AddAffixedExpr {
     pub rhs: Vec<(bool, MulAffixedExpr)>,
 }
 
-impl AddAffixedExpr {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for AddAffixedExpr {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         let Some(lhs) = MulAffixedExpr::accept(parser)? else {
             return Ok(None);
         };
@@ -46,7 +47,6 @@ impl AddAffixedExpr {
                     data: DiagData::Err(Error::MiscExpecting {
                         expected: "an expression after operator".to_string(),
                     }),
-                    span: parser.cur_span(),
                 });
             };
             rhs.push((op, expr));
@@ -61,8 +61,8 @@ pub struct MulAffixedExpr {
     pub rhs: Vec<(bool, PrefixedExpr)>,
 }
 
-impl MulAffixedExpr {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for MulAffixedExpr {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         let Some(lhs) = PrefixedExpr::accept(parser)? else {
             return Ok(None);
         };
@@ -81,7 +81,6 @@ impl MulAffixedExpr {
                     data: DiagData::Err(Error::MiscExpecting {
                         expected: "an expression after operator".to_string(),
                     }),
-                    span: parser.cur_span(),
                 });
             };
             rhs.push((op, expr));
@@ -100,8 +99,8 @@ pub struct PrefixedExpr {
     pub rhs: PathExpr,
 }
 
-impl PrefixedExpr {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for PrefixedExpr {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         let prefix = match parser.cur_lexeme.kind {
             lexeme::Kind::Minus => {
                 parser.next_non_ws_lexeme(true);
@@ -122,8 +121,8 @@ pub struct PathExpr {
     pub rhs: Vec<Field>,
 }
 
-impl PathExpr {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for PathExpr {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         let Some(lhs) = TerminalExpr::accept(parser)? else {
             return Ok(None);
         };
@@ -140,7 +139,6 @@ impl PathExpr {
                     data: DiagData::Err(Error::MiscExpecting {
                         expected: "a field after '.'".to_string(),
                     }),
-                    span: parser.cur_span(),
                 });
             };
             rhs.push(field);

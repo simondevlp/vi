@@ -1,6 +1,7 @@
 use lexer::lexeme::{self, Kind};
 
 use crate::{
+    accept::Acceptor,
     diag::{BracketKind, Diag, DiagData, Error},
     parser::Parser,
     syntax::{Span, expr::Expr},
@@ -11,21 +12,14 @@ pub enum Keyword {
     Cho,
 }
 
-impl Keyword {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Keyword::Cho => "cho",
-        }
-    }
-
-    pub fn accept(parser: &mut Parser, kw: Self) -> Result<Option<Self>, Diag> {
-        Ok(match parser.cur_lexeme.kind {
-            Kind::Word if parser.cur_lexeme_snippet_is(kw.as_str()) => {
-                parser.next_non_ws_lexeme(true);
-                Some(kw)
-            }
+impl Acceptor for Keyword {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        let ret = Ok(match parser.cur_lexeme_snippet() {
+            "cho" => Some(Keyword::Cho),
             _ => None,
-        })
+        });
+        parser.next_non_ws_lexeme(true);
+        ret
     }
 }
 
@@ -45,8 +39,8 @@ pub enum Literal {
     DoubleQuotedString(DoubleQuotedString),
 }
 
-impl Literal {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for Literal {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(if let Some(float) = Float::accept(parser)? {
             Some(Literal::Float(float))
         } else if let Some(decimal) = Decimal::accept(parser)? {
@@ -59,8 +53,8 @@ impl Literal {
     }
 }
 
-impl Ident {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for Ident {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
             Kind::Word => {
                 let start = parser.cur_pos;
@@ -93,8 +87,8 @@ impl Ident {
     }
 }
 
-impl Float {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for Float {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
             Kind::Float => {
                 let span = parser.cur_span();
@@ -106,8 +100,8 @@ impl Float {
     }
 }
 
-impl Decimal {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for Decimal {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
             Kind::Decimal => {
                 let span = parser.cur_span();
@@ -119,8 +113,8 @@ impl Decimal {
     }
 }
 
-impl DoubleQuotedString {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for DoubleQuotedString {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
             Kind::String => {
                 let span = parser.cur_span();
@@ -138,8 +132,8 @@ pub enum Field {
     Method(Invocation),
 }
 
-impl Field {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for Field {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         let Some(callee) = Ident::accept(parser)? else {
             return Ok(None);
         };
@@ -170,8 +164,8 @@ pub enum TerminalExpr {
 #[derive(Debug)]
 pub struct TupleExpr(pub Vec<Expr>);
 
-impl TupleExpr {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for TupleExpr {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
             lexeme::Kind::LeftParen => {
                 parser.next_non_ws_lexeme(true);
@@ -195,7 +189,6 @@ impl TupleExpr {
                         data: DiagData::Err(Error::BracketNotClosed {
                             kind: BracketKind::Parenthesis,
                         }),
-                        span: (parser.cur_pos, 1),
                     });
                 }
                 parser.next_non_ws_lexeme(true);
@@ -206,8 +199,8 @@ impl TupleExpr {
     }
 }
 
-impl TerminalExpr {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+impl Acceptor for TerminalExpr {
+    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(if let Some(lit) = Literal::accept(parser)? {
             Some(TerminalExpr::Literal(lit))
         } else if let Some(tuple) = TupleExpr::accept(parser)? {
