@@ -4,7 +4,7 @@ use crate::{
     diag::{Diag, DiagData, Error},
     parser::Parser,
     syntax::expr::{
-        Expr, TupleExpr,
+        Expr, PathExpr,
         terminal::{Ident, Keyword},
     },
 };
@@ -73,25 +73,24 @@ impl ChoStatement {
 }
 
 #[derive(Debug)]
-pub struct InvocationStatement {
-    pub callee: Ident,
-    pub tuple: TupleExpr,
-}
+pub struct InvocationStatement(pub PathExpr);
 
 impl InvocationStatement {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        let Some(callee) = Ident::accept(parser)? else {
-            return Ok(None);
-        };
-        let Some(tuple) = TupleExpr::accept(parser)? else {
-            return Err(Diag {
-                line: parser.cur_line,
-                span: (parser.cur_pos, 1),
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "a tuple of arguments for invocation".to_string(),
-                }),
-            });
-        };
-        Ok(Some(InvocationStatement { callee, tuple }))
+        if let Some(path_expr) = PathExpr::accept(parser)? {
+            if path_expr.rhs.is_empty() {
+                Err(Diag {
+                    line: parser.cur_line,
+                    span: (parser.cur_pos, 1),
+                    data: DiagData::Err(Error::MiscExpecting {
+                        expected: "a statement".to_string(),
+                    }),
+                })
+            } else {
+                Ok(Some(InvocationStatement(path_expr)))
+            }
+        } else {
+            Ok(None)
+        }
     }
 }

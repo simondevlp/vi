@@ -1,9 +1,9 @@
 use lexer::lexeme;
 
 use crate::{
-    diag::{BracketKind, Diag, DiagData, Error},
+    diag::{Diag, DiagData, Error},
     parser::Parser,
-    syntax::expr::terminal::Literal,
+    syntax::expr::terminal::{Field, TerminalExpr},
 };
 
 pub mod terminal;
@@ -96,8 +96,8 @@ pub enum PrefixedExprKind {
 }
 #[derive(Debug)]
 pub struct PrefixedExpr {
-    pub prefix: Option<PrefixedExprKind>,
-    pub terminal: TerminalExpr,
+    pub lhs: Option<PrefixedExprKind>,
+    pub rhs: PathExpr,
 }
 
 impl PrefixedExpr {
@@ -109,72 +109,43 @@ impl PrefixedExpr {
             }
             _ => None,
         };
-        match TerminalExpr::accept(parser)? {
-            Some(terminal) => Ok(Some(PrefixedExpr { prefix, terminal })),
-            None => Err(Diag {
-                line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "an expression".to_string(),
-                }),
-                span: parser.cur_span(),
-            }),
-        }
+        Ok(match PathExpr::accept(parser)? {
+            Some(rhs) => Some(PrefixedExpr { lhs: prefix, rhs }),
+            None => None,
+        })
     }
 }
 
 #[derive(Debug)]
-pub enum TerminalExpr {
-    Literal(Literal),
-    Tuple(TupleExpr),
+pub struct PathExpr {
+    pub lhs: TerminalExpr,
+    pub rhs: Vec<Field>,
 }
 
-#[derive(Debug)]
-pub struct TupleExpr(pub Vec<Expr>);
-
-impl TupleExpr {
+impl PathExpr {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        Ok(match parser.cur_lexeme.kind {
-            lexeme::Kind::LeftParen => {
-                parser.next_non_ws_lexeme(true);
-                let mut exprs = Vec::new();
-                loop {
-                    let Some(expr) = Expr::accept(parser)? else {
-                        break;
-                    };
-                    exprs.push(expr);
-                    parser.skip_ws_if_any(true);
-                    if matches!(parser.cur_lexeme.kind, lexeme::Kind::Comma) {
-                        parser.next_non_ws_lexeme(true);
-                        continue;
-                    } else {
-                        break;
-                    }
-                }
-                if !matches!(parser.cur_lexeme.kind, lexeme::Kind::RightParen) {
-                    return Err(Diag {
-                        line: parser.cur_line,
-                        data: DiagData::Err(Error::BracketNotClosed {
-                            kind: BracketKind::Parenthesis,
-                        }),
-                        span: (parser.cur_pos, 1),
-                    });
-                }
-                parser.next_non_ws_lexeme(true);
-                Some(TupleExpr(exprs))
+        let Some(lhs) = TerminalExpr::accept(parser)? else {
+            return Ok(None);
+        };
+        let mut rhs = Vec::new();
+        loop {
+            eprintln!("PathExpr::accept: checking for field access");
+            parser.skip_ws_if_any(true);
+            if !matches!(parser.cur_lexeme.kind, lexeme::Kind::Period) {
+                break;
             }
-            _ => None,
-        })
-    }
-}
-
-impl TerminalExpr {
-    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        Ok(if let Some(lit) = Literal::accept(parser)? {
-            Some(TerminalExpr::Literal(lit))
-        } else if let Some(tuple) = TupleExpr::accept(parser)? {
-            Some(TerminalExpr::Tuple(tuple))
-        } else {
-            None
-        })
+            parser.next_non_ws_lexeme(true); // consume '.'
+            let Some(field) = Field::accept(parser)? else {
+                return Err(Diag {
+                    line: parser.cur_line,
+                    data: DiagData::Err(Error::MiscExpecting {
+                        expected: "a field after '.'".to_string(),
+                    }),
+                    span: parser.cur_span(),
+                });
+            };
+            rhs.push(field);
+        }
+        Ok(Some(PathExpr { lhs, rhs }))
     }
 }
