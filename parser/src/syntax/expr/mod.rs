@@ -129,7 +129,6 @@ impl PathExpr {
         };
         let mut rhs = Vec::new();
         loop {
-            eprintln!("PathExpr::accept: checking for field access");
             parser.skip_ws_if_any(true);
             if !matches!(parser.cur_lexeme.kind, lexeme::Kind::Period) {
                 break;

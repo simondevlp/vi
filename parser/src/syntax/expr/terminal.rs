@@ -121,7 +121,6 @@ impl Decimal {
 
 impl DoubleQuotedString {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        eprintln!("DoubleQuotedString::accept at pos {}", parser.cur_pos);
         Ok(match parser.cur_lexeme.kind {
             Kind::String => {
                 let span = parser.cur_span();
