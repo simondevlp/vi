@@ -15,10 +15,12 @@ pub enum Keyword {
 impl Acceptor for Keyword {
     fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         let ret = Ok(match parser.cur_lexeme_snippet() {
-            "cho" => Some(Keyword::Cho),
+            "cho" => {
+                parser.next_non_ws_lexeme(true);
+                Some(Keyword::Cho)
+            }
             _ => None,
         });
-        parser.next_non_ws_lexeme(true);
         ret
     }
 }
