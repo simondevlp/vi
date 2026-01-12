@@ -10,18 +10,20 @@ use crate::{
 #[derive(Debug)]
 pub enum Keyword {
     Cho,
+    Lop,
 }
 
-impl Acceptor for Keyword {
-    fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        let ret = Ok(match parser.cur_lexeme_snippet() {
-            "cho" => {
-                parser.next_non_ws_lexeme(true);
-                Some(Keyword::Cho)
-            }
-            _ => None,
-        });
-        ret
+impl Keyword {
+    fn to_lit(&self) -> &'static str {
+        match self {
+            Keyword::Cho => "cho",
+            Keyword::Lop => "lớp",
+        }
+    }
+
+    pub fn check(parser: &mut Parser, against: Self) -> bool {
+        matches!(parser.cur_lexeme.kind, Kind::Word)
+            && parser.cur_lexeme_snippet() == against.to_lit()
     }
 }
 

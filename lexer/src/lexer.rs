@@ -1,24 +1,27 @@
-use std::str::Chars;
-
 use crate::lexeme::{Kind, Lexeme};
 
 pub struct Lexer<'a> {
-    chars: Chars<'a>,
-    cur_len: u32,
+    input: &'a str,
+    pos: usize,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
-        Self {
-            chars: input.chars(),
-            cur_len: 0,
-        }
+        Self { input, pos: 0 }
+    }
+
+    fn remaining(&self) -> &'a str {
+        &self.input[self.pos..]
+    }
+
+    fn peek_char(&self) -> Option<char> {
+        self.remaining().chars().next()
     }
 
     fn next_char(&mut self) -> Option<char> {
-        let ch = self.chars.next();
-        if ch.is_some() {
-            self.cur_len += 1;
+        let ch = self.peek_char();
+        if let Some(c) = ch {
+            self.pos += c.len_utf8();
         }
         ch
     }
@@ -31,10 +34,6 @@ impl<'a> Lexer<'a> {
                 break;
             }
         }
-    }
-
-    fn peek_char(&self) -> Option<char> {
-        self.chars.clone().next()
     }
 
     fn check_is_alpha(ch: char) -> bool {
@@ -180,7 +179,7 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn next(&mut self) -> Lexeme {
-        self.cur_len = 0;
+        let start_pos = self.pos;
         let kind = match self.next_char() {
             None => Kind::Eof,
             Some('\n') => Kind::Eol,
@@ -237,9 +236,10 @@ impl<'a> Lexer<'a> {
             Some(']') => Kind::RightBracket,
             Some(_) => Kind::Invalid,
         };
+        let byte_len = (self.pos - start_pos) as u32;
         Lexeme {
             kind,
-            len: self.cur_len,
+            len: byte_len,
         }
     }
 }

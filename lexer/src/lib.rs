@@ -50,7 +50,7 @@ pub mod tests {
     #[test]
     fn whitespaces() {
         let mut lexer = Lexer::new("\t\r\u{2003}");
-        assert_lexer_lexeme!(lexer, Kind::Whitespaces, 3);
+        assert_lexer_lexeme!(lexer, Kind::Whitespaces, 5);
         assert_lexer_eof!(lexer);
     }
 
@@ -71,7 +71,7 @@ pub mod tests {
     #[test]
     fn word_with_unicode() {
         let mut lexer = Lexer::new("xin_chào123");
-        assert_lexer_lexeme!(lexer, Kind::Word, 11);
+        assert_lexer_lexeme!(lexer, Kind::Word, 12);
         assert_lexer_eof!(lexer);
     }
 
