@@ -224,6 +224,7 @@ impl<'a> Lexer<'a> {
             Some('*') => Kind::Asterisk,
             Some('/') => Kind::Slash,
             Some('=') => Kind::Equal,
+            Some(':') => Kind::Colon,
             Some('.') => Kind::Period,
             Some(',') => Kind::Comma,
             Some('>') => Kind::Greater,

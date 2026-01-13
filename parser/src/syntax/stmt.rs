@@ -10,6 +10,7 @@ use crate::{
             Expr, PathExpr,
             terminal::{Field, Ident, Keyword, TerminalExpr},
         },
+        type_::NameTypePair,
     },
 };
 
@@ -36,7 +37,7 @@ impl Acceptor for Statement {
 
 #[derive(Debug)]
 pub struct ChoStatement {
-    pub lhs: Ident,
+    pub lhs: NameTypePair,
     pub rhs: Option<Expr>,
 }
 
@@ -46,7 +47,7 @@ impl Acceptor for ChoStatement {
             return Ok(None);
         };
         parser.next_non_ws_lexeme(true); // consume 'cho'
-        let Some(lhs) = Ident::accept(parser)? else {
+        let Some(lhs) = NameTypePair::accept(parser)? else {
             return Err(Diag {
                 line: parser.cur_line,
                 data: DiagData::Err(Error::Expecting {
@@ -79,7 +80,7 @@ impl Acceptor for ChoStatement {
 #[derive(Debug)]
 pub struct LopStatement {
     pub name: Ident,
-    pub block: Block<ChoStatement>,
+    pub block: Block<NameTypePair>,
 }
 
 impl Acceptor for LopStatement {
@@ -110,7 +111,7 @@ impl Acceptor for LopStatement {
             });
         };
         parser.next_lexeme(); // consume EOL
-        let Some(block) = Block::<ChoStatement>::accept(parser)? else {
+        let Some(block) = Block::<NameTypePair>::accept(parser)? else {
             return Err(Diag {
                 line: parser.cur_line,
                 data: DiagData::Err(Error::Expecting {
