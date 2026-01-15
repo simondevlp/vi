@@ -1,5 +1,3 @@
-use std::ops::Add;
-
 use lexer::lexeme;
 
 use crate::{
