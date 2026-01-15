@@ -1,3 +1,5 @@
-mod diag;
+pub mod diag;
 pub mod parser;
-mod syntax;
+pub mod syntax;
+
+pub type Span = (u32, u32);

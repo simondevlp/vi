@@ -1,6 +1,6 @@
 use lexer::lexeme::Kind;
 
-use crate::{diag::Diag, parser::Parser, syntax::Span};
+use crate::{Span, diag::Diag, parser::Parser};
 
 #[derive(Debug)]
 pub enum Keyword {

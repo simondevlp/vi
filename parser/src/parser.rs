@@ -3,7 +3,7 @@ use lexer::{
     lexer::Lexer,
 };
 
-use crate::syntax::Programme;
+use crate::{Span, syntax::Programme};
 
 pub struct Parser<'a> {
     input: &'a str,
@@ -61,12 +61,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn get_snippet(&self, start: u32, len: u32) -> &str {
+    pub fn get_snippet(&self, span: &Span) -> &str {
+        let (start, len) = *span;
         &self.input[start as usize..(start + len) as usize]
     }
 
     pub fn cur_lexeme_snippet(&self) -> &str {
-        self.get_snippet(self.cur_pos, self.cur_lexeme.len)
+        self.get_snippet(&(self.cur_pos, self.cur_lexeme.len))
     }
 
     pub fn cur_lexeme_snippet_is(&self, expected: &str) -> bool {

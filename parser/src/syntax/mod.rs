@@ -22,5 +22,3 @@ impl Programme {
         Ok(Programme { statements })
     }
 }
-
-pub type Span = (u32, u32);

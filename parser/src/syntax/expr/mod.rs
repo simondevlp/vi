@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use lexer::lexeme;
 
 use crate::{
@@ -22,16 +24,20 @@ impl Expr {
 
 #[derive(Debug)]
 pub struct AddAffixedExpr {
-    pub lhs: MulAffixedExpr,
-    pub rhs: Vec<(bool, MulAffixedExpr)>,
+    pub lhs: Option<Box<AddAffixedExpr>>,
+    pub rhs: (bool, MulAffixedExpr),
 }
 
 impl AddAffixedExpr {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        let Some(lhs) = MulAffixedExpr::accept(parser)? else {
-            return Ok(None);
-        };
-        let mut rhs = Vec::new();
+        let mut lhs = None;
+        let mut rhs = (
+            true,
+            match MulAffixedExpr::accept(parser)? {
+                Some(expr) => expr,
+                None => return Ok(None),
+            },
+        );
         loop {
             parser.skip_ws_if_any(true);
             let op = match parser.cur_lexeme.kind {
@@ -40,16 +46,22 @@ impl AddAffixedExpr {
                 _ => break,
             };
             parser.next_non_ws_lexeme(true); // consume op
-            let Some(expr) = MulAffixedExpr::accept(parser)? else {
-                return Err(Diag {
-                    line: parser.cur_line,
-                    data: DiagData::Err(Error::MiscExpecting {
-                        expected: "an expression after operator".to_string(),
-                    }),
-                    span: parser.cur_span(),
-                });
-            };
-            rhs.push((op, expr));
+            lhs = Some(Box::new(AddAffixedExpr { lhs, rhs }));
+            rhs = (
+                op,
+                match MulAffixedExpr::accept(parser)? {
+                    Some(expr) => expr,
+                    None => {
+                        return Err(Diag {
+                            line: parser.cur_line,
+                            data: DiagData::Err(Error::MiscExpecting {
+                                expected: "an expression after operator".to_string(),
+                            }),
+                            span: parser.cur_span(),
+                        });
+                    }
+                },
+            );
         }
         Ok(Some(AddAffixedExpr { lhs, rhs }))
     }
@@ -57,16 +69,20 @@ impl AddAffixedExpr {
 
 #[derive(Debug)]
 pub struct MulAffixedExpr {
-    pub lhs: PrefixedExpr,
-    pub rhs: Vec<(bool, PrefixedExpr)>,
+    pub lhs: Option<Box<MulAffixedExpr>>,
+    pub rhs: (bool, PrefixedExpr),
 }
 
 impl MulAffixedExpr {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        let Some(lhs) = PrefixedExpr::accept(parser)? else {
-            return Ok(None);
-        };
-        let mut rhs = Vec::new();
+        let mut lhs = None;
+        let mut rhs = (
+            true,
+            match PrefixedExpr::accept(parser)? {
+                Some(expr) => expr,
+                None => return Ok(None),
+            },
+        );
         loop {
             parser.skip_ws_if_any(true);
             let op = match parser.cur_lexeme.kind {
@@ -75,16 +91,22 @@ impl MulAffixedExpr {
                 _ => break,
             };
             parser.next_non_ws_lexeme(true); // consume op
-            let Some(expr) = PrefixedExpr::accept(parser)? else {
-                return Err(Diag {
-                    line: parser.cur_line,
-                    data: DiagData::Err(Error::MiscExpecting {
-                        expected: "an expression after operator".to_string(),
-                    }),
-                    span: parser.cur_span(),
-                });
-            };
-            rhs.push((op, expr));
+            lhs = Some(Box::new(MulAffixedExpr { lhs, rhs }));
+            rhs = (
+                op,
+                match PrefixedExpr::accept(parser)? {
+                    Some(expr) => expr,
+                    None => {
+                        return Err(Diag {
+                            line: parser.cur_line,
+                            data: DiagData::Err(Error::MiscExpecting {
+                                expected: "an expression after operator".to_string(),
+                            }),
+                            span: parser.cur_span(),
+                        });
+                    }
+                },
+            );
         }
         Ok(Some(MulAffixedExpr { lhs, rhs }))
     }
