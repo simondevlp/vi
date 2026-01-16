@@ -20,3 +20,25 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            artefact-name: vi
+          - os: windows-latest
+            artefact-name: vi.exe
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release
+      - name: Release
+        uses: softprops/actions-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: ./target/release/${{matrix.artefact-name}}
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
