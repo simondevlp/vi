@@ -1,6 +1,6 @@
 use parser::{parser::Parser, syntax::Programme};
 
-use crate::{diag::Diag, interp::Interpretable};
+use crate::{interp::Interpretable};
 
 pub mod diag;
 pub mod eval;
