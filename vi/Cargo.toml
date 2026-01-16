@@ -2,6 +2,7 @@
 name = "vi"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/simondevlp/vi"
 
 [dependencies]
 interp = { path = "../interp" }
