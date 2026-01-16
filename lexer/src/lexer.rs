@@ -17,8 +17,8 @@ impl<'a> Lexer<'a> {
 
     fn next_char(&mut self) -> Option<char> {
         let ch = self.chars.next();
-        if ch.is_some() {
-            self.cur_len += 1;
+        if let Some(c) = ch {
+            self.cur_len += c.len_utf8() as u32;
         }
         ch
     }

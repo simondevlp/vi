@@ -1,6 +1,6 @@
 use parser::{parser::Parser, syntax::Programme};
 
-use crate::interp::Interpretable;
+use crate::{diag::Diag, interp::Interpretable};
 
 pub mod diag;
 pub mod eval;
@@ -19,7 +19,13 @@ impl<'a> Interpreter<'a> {
     }
 
     pub fn parse(&mut self) -> Option<Programme> {
-        self.parser.visit_programme()
+        let prog = self.parser.visit_programme();
+        if self.parser.diag.len() > 0 {
+            self.parser.print_diags();
+            None
+        } else {
+            prog
+        }
     }
 
     pub fn cur_line(&self) -> u32 {

@@ -3,7 +3,7 @@ use lexer::{
     lexer::Lexer,
 };
 
-use crate::{Span, syntax::Programme};
+use crate::{Span, diag::Diag, syntax::Programme};
 
 pub struct Parser<'a> {
     input: &'a str,
@@ -11,7 +11,7 @@ pub struct Parser<'a> {
     pub cur_pos: u32,
     pub cur_lexeme: Lexeme,
     pub cur_line: u32,
-    diag: Vec<crate::diag::Diag>,
+    pub diag: Vec<Diag>,
 }
 
 impl<'a> Parser<'a> {
