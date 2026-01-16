@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["interp", "lexer", "parser", "vi"]
+package.version = "0.1.1-a"
 
 # The profile that 'dist' will build with
 [profile.dist]

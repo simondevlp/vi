@@ -1,6 +1,6 @@
 [package]
 name = "vi"
-version = "0.1.0-a"
+version.workspace = true
 edition = "2024"
 repository = "https://github.com/simondevlp/vi"
 

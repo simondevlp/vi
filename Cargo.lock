@@ -4,25 +4,25 @@ version = 4
 
 [[package]]
 name = "interp"
-version = "0.1.0-a"
+version = "0.1.1-a"
 dependencies = [
  "parser",
 ]
 
 [[package]]
 name = "lexer"
-version = "0.1.0-a"
+version = "0.1.1-a"
 
 [[package]]
 name = "parser"
-version = "0.1.0-a"
+version = "0.1.1-a"
 dependencies = [
  "lexer",
 ]
 
 [[package]]
 name = "vi"
-version = "0.1.0-a"
+version = "0.1.1-a"
 dependencies = [
  "interp",
 ]
