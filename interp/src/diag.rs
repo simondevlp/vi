@@ -21,24 +21,32 @@ pub enum DiagData {
 impl Display for DiagData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DiagData::ParseError(diag) => write!(f, "Parse error: {}", diag),
-            DiagData::EvalError(err) => write!(f, "Evaluation error: {}", err),
+            Self::ParseError(diag) => write!(f, "Parse error: {}", diag),
+            Self::EvalError(err) => write!(f, "Evaluation error: {}", err),
         }
     }
 }
 
 pub enum EvalError {
-    MalformedLiteral(String),
+    MalformedLiteral { lit: String },
+    NotFoundInScope { name: String },
+    AlreadyDeclaredInScope { name: String },
     UndefinedOperation { op: OperationKind, operand: String },
 }
 
 impl Display for EvalError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EvalError::MalformedLiteral(lit) => {
+            Self::MalformedLiteral { lit } => {
                 write!(f, "Malformed literal: {}", lit)
             }
-            EvalError::UndefinedOperation { op, operand } => {
+            Self::NotFoundInScope { name } => {
+                write!(f, "Identifier '{}' is not found in scope", name)
+            }
+            Self::AlreadyDeclaredInScope { name } => {
+                write!(f, "Identifier '{}' is already declared in scope", name)
+            }
+            Self::UndefinedOperation { op, operand } => {
                 write!(f, "Undefined operation: {} with {}", op, operand)
             }
         }

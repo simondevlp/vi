@@ -1,20 +1,23 @@
-use parser::{parser::Parser, syntax::Programme};
+use parser::{Span, parser::Parser, syntax::Programme};
 
-use crate::{interp::Interpretable};
+use crate::{interp::Interpretable, scope::Scope};
 
 pub mod diag;
 pub mod eval;
 pub mod interp;
 pub mod obj;
+pub mod scope;
 
-pub struct Interpreter<'a> {
+pub struct Evaluator<'a> {
     parser: Parser<'a>,
+    global: Scope<'a>,
 }
 
-impl<'a> Interpreter<'a> {
+impl<'a> Evaluator<'a> {
     pub fn new(input: &'a str) -> Self {
-        Interpreter {
+        Evaluator {
             parser: Parser::new(input),
+            global: Scope::new(),
         }
     }
 
@@ -49,5 +52,9 @@ impl<'a> Interpreter<'a> {
                 println!("No programme parsed.");
             }
         }
+    }
+
+    pub fn snippet(&self, span: &Span) -> &'a str {
+        self.parser.get_snippet(span)
     }
 }

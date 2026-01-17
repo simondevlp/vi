@@ -61,7 +61,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn get_snippet(&self, span: &Span) -> &str {
+    pub fn get_snippet(&self, span: &Span) -> &'a str {
         let (start, len) = *span;
         &self.input[start as usize..(start + len) as usize]
     }
