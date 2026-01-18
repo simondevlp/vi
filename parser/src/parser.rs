@@ -61,12 +61,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn get_snippet(&self, span: &Span) -> &'a str {
+    pub fn get_snippet(&self, span: &Span) -> String {
         let (start, len) = *span;
-        &self.input[start as usize..(start + len) as usize]
+        self.input[start as usize..(start + len) as usize].to_string()
     }
 
-    pub fn cur_lexeme_snippet(&self) -> &str {
+    pub fn cur_lexeme_snippet(&self) -> String {
         self.get_snippet(&(self.cur_pos, self.cur_lexeme.len))
     }
 

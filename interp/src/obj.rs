@@ -25,7 +25,7 @@ impl Display for StringObj {
 }
 
 #[derive(Clone)]
-pub struct TupleObj(pub Vec<ValueObj>);
+pub struct TupleObj(pub Vec<Object>);
 
 impl Display for TupleObj {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -35,7 +35,7 @@ impl Display for TupleObj {
 }
 
 #[derive(Clone)]
-pub enum ValueObj {
+pub enum Object {
     Undefined,
     Infinity { positive: bool },
     Numerical(NumericalObj),
@@ -43,35 +43,35 @@ pub enum ValueObj {
     Tuple(TupleObj),
 }
 
-impl Display for ValueObj {
+impl Display for Object {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                ValueObj::Undefined => "undefined".to_string(),
-                ValueObj::Numerical(num) => format!("{}", num),
-                ValueObj::Infinity { positive } => {
+                Object::Undefined => "undefined".to_string(),
+                Object::Numerical(num) => format!("{}", num),
+                Object::Infinity { positive } => {
                     if *positive {
                         "+inf".to_string()
                     } else {
                         "-inf".to_string()
                     }
                 }
-                ValueObj::String(s) => format!("{}", s),
-                ValueObj::Tuple(t) => format!("{}", t),
+                Object::String(s) => format!("{}", s),
+                Object::Tuple(t) => format!("{}", t),
             }
         )
     }
 }
 
-impl ValueObj {
+impl Object {
     fn to_string(&self) -> String {
         match self {
             Self::Undefined => "an undefined value".to_string(),
-            ValueObj::Numerical(_) | ValueObj::Infinity { .. } => "a number".to_string(),
-            ValueObj::String(_) => "a string".to_string(),
-            ValueObj::Tuple(_) => "a tuple".to_string(),
+            Object::Numerical(_) | Object::Infinity { .. } => "a number".to_string(),
+            Object::String(_) => "a string".to_string(),
+            Object::Tuple(_) => "a tuple".to_string(),
         }
     }
 }
@@ -100,14 +100,14 @@ impl Display for OperationKind {
 
 pub struct Operation {
     pub kind: OperationKind,
-    pub operands: (ValueObj, ValueObj),
+    pub operands: (Object, Object),
 }
 
 impl Evaluable for Operation {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         match &self.kind {
-            OperationKind::Add => Ok(ValueObj::Numerical(NumericalObj(match &self.operands {
-                (ValueObj::Numerical(op1), ValueObj::Numerical(op2)) => op1.0 + op2.0,
+            OperationKind::Add => Ok(Object::Numerical(NumericalObj(match &self.operands {
+                (Object::Numerical(op1), Object::Numerical(op2)) => op1.0 + op2.0,
                 _ => {
                     return Err(Diag {
                         line: eval.cur_line(),
@@ -122,46 +122,42 @@ impl Evaluable for Operation {
                     });
                 }
             }))),
-            OperationKind::Subtract => {
-                Ok(ValueObj::Numerical(NumericalObj(match &self.operands {
-                    (ValueObj::Numerical(op1), ValueObj::Numerical(op2)) => op1.0 - op2.0,
-                    _ => {
-                        return Err(Diag {
-                            line: eval.cur_line(),
-                            data: DiagData::EvalError(EvalError::UndefinedOperation {
-                                op: self.kind,
-                                operand: format!(
-                                    "{} and {}",
-                                    self.operands.0.to_string(),
-                                    self.operands.1.to_string()
-                                ),
-                            }),
-                        });
-                    }
-                })))
-            }
-            OperationKind::Multiply => {
-                Ok(ValueObj::Numerical(NumericalObj(match &self.operands {
-                    (ValueObj::Numerical(op1), ValueObj::Numerical(op2)) => op1.0 * op2.0,
-                    _ => {
-                        return Err(Diag {
-                            line: eval.cur_line(),
-                            data: DiagData::EvalError(EvalError::UndefinedOperation {
-                                op: self.kind,
-                                operand: format!(
-                                    "{} and {}",
-                                    self.operands.0.to_string(),
-                                    self.operands.1.to_string()
-                                ),
-                            }),
-                        });
-                    }
-                })))
-            }
-            OperationKind::Divide => Ok(ValueObj::Numerical(NumericalObj(match &self.operands {
-                (ValueObj::Numerical(op1), ValueObj::Numerical(op2)) => {
+            OperationKind::Subtract => Ok(Object::Numerical(NumericalObj(match &self.operands {
+                (Object::Numerical(op1), Object::Numerical(op2)) => op1.0 - op2.0,
+                _ => {
+                    return Err(Diag {
+                        line: eval.cur_line(),
+                        data: DiagData::EvalError(EvalError::UndefinedOperation {
+                            op: self.kind,
+                            operand: format!(
+                                "{} and {}",
+                                self.operands.0.to_string(),
+                                self.operands.1.to_string()
+                            ),
+                        }),
+                    });
+                }
+            }))),
+            OperationKind::Multiply => Ok(Object::Numerical(NumericalObj(match &self.operands {
+                (Object::Numerical(op1), Object::Numerical(op2)) => op1.0 * op2.0,
+                _ => {
+                    return Err(Diag {
+                        line: eval.cur_line(),
+                        data: DiagData::EvalError(EvalError::UndefinedOperation {
+                            op: self.kind,
+                            operand: format!(
+                                "{} and {}",
+                                self.operands.0.to_string(),
+                                self.operands.1.to_string()
+                            ),
+                        }),
+                    });
+                }
+            }))),
+            OperationKind::Divide => Ok(Object::Numerical(NumericalObj(match &self.operands {
+                (Object::Numerical(op1), Object::Numerical(op2)) => {
                     if op2.0 == 0. {
-                        return Ok(ValueObj::Infinity {
+                        return Ok(Object::Infinity {
                             positive: op1.0.is_sign_positive(),
                         });
                     } else {
@@ -183,8 +179,8 @@ impl Evaluable for Operation {
                 }
             }))),
             OperationKind::NegativePrefix => {
-                Ok(ValueObj::Numerical(NumericalObj(match &self.operands {
-                    (ValueObj::Numerical(_), ValueObj::Numerical(op2)) => -op2.0,
+                Ok(Object::Numerical(NumericalObj(match &self.operands {
+                    (Object::Numerical(_), Object::Numerical(op2)) => -op2.0,
                     _ => {
                         return Err(Diag {
                             line: eval.cur_line(),

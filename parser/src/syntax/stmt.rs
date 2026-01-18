@@ -4,7 +4,7 @@ use crate::{
     diag::{Diag, DiagData, Error},
     parser::Parser,
     syntax::expr::{
-        Expr, TupleExpr,
+        Expr, Field,
         terminal::{Ident, Keyword},
     },
 };
@@ -43,7 +43,7 @@ impl ChoStatement {
             return Err(Diag {
                 line: parser.cur_line,
                 span: parser.cur_span(),
-                data: DiagData::Err(Error::MiscExpecting {
+                data: DiagData::Err(Error::Expecting {
                     expected: "the left-hand side for declaration".to_string(),
                 }),
             });
@@ -56,7 +56,7 @@ impl ChoStatement {
                     return Err(Diag {
                         line: parser.cur_line,
                         span: parser.cur_span(),
-                        data: DiagData::Err(Error::MiscExpecting {
+                        data: DiagData::Err(Error::Expecting {
                             expected: "the right-hand side expression for assignment".to_string(),
                         }),
                     });
@@ -74,24 +74,14 @@ impl ChoStatement {
 
 #[derive(Debug)]
 pub struct InvocationStatement {
-    pub callee: Ident,
-    pub tuple: TupleExpr,
+    pub path: Field,
 }
 
 impl InvocationStatement {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        let Some(callee) = Ident::accept(parser)? else {
-            return Ok(None);
-        };
-        let Some(tuple) = TupleExpr::accept(parser)? else {
-            return Err(Diag {
-                line: parser.cur_line,
-                span: (parser.cur_pos, 1),
-                data: DiagData::Err(Error::MiscExpecting {
-                    expected: "a tuple of arguments for invocation".to_string(),
-                }),
-            });
-        };
-        Ok(Some(InvocationStatement { callee, tuple }))
+        match Field::accept(parser)? {
+            Some(path) => Ok(Some(InvocationStatement { path })),
+            None => Ok(None),
+        }
     }
 }

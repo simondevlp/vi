@@ -4,7 +4,7 @@ use crate::{
     Evaluator,
     diag::{Diag, DiagData, EvalError},
     eval::Evaluable,
-    obj::ValueObj,
+    obj::Object,
 };
 
 pub trait Interpretable {
@@ -32,17 +32,15 @@ impl Interpretable for stmt::ChoStatement {
     fn interpret(&self, interpreter: &mut Evaluator) -> Result<(), Diag> {
         let value = match &self.rhs {
             Some(expr) => expr.evaluate(interpreter)?,
-            None => ValueObj::Undefined,
+            None => Object::Undefined,
         };
-        match interpreter
-            .global
-            .declare(interpreter.snippet(&self.lhs.0), value)
-        {
+        let name = interpreter.snippet(&self.lhs.0).to_string();
+        match interpreter.current_scope_mut().declare(name, value) {
             true => Ok(()),
             false => Err(Diag {
                 line: interpreter.cur_line(),
                 data: DiagData::EvalError(EvalError::AlreadyDeclaredInScope {
-                    name: interpreter.snippet(&self.lhs.0).to_string(),
+                    name: interpreter.snippet(&self.lhs.0).to_string().to_string(),
                 }),
             }),
         }

@@ -3,7 +3,7 @@ use lexer::lexeme;
 use crate::{
     diag::{BracketKind, Diag, DiagData, Error},
     parser::Parser,
-    syntax::expr::terminal::Literal,
+    syntax::expr::terminal::{Ident, Literal},
 };
 
 pub mod terminal;
@@ -52,7 +52,7 @@ impl AddAffixedExpr {
                     None => {
                         return Err(Diag {
                             line: parser.cur_line,
-                            data: DiagData::Err(Error::MiscExpecting {
+                            data: DiagData::Err(Error::Expecting {
                                 expected: "an expression after operator".to_string(),
                             }),
                             span: parser.cur_span(),
@@ -97,7 +97,7 @@ impl MulAffixedExpr {
                     None => {
                         return Err(Diag {
                             line: parser.cur_line,
-                            data: DiagData::Err(Error::MiscExpecting {
+                            data: DiagData::Err(Error::Expecting {
                                 expected: "an expression after operator".to_string(),
                             }),
                             span: parser.cur_span(),
@@ -117,7 +117,7 @@ pub enum PrefixedExprKind {
 #[derive(Debug)]
 pub struct PrefixedExpr {
     pub prefix: Option<PrefixedExprKind>,
-    pub terminal: TerminalExpr,
+    pub expr: PathExpr,
 }
 
 impl PrefixedExpr {
@@ -129,11 +129,11 @@ impl PrefixedExpr {
             }
             _ => None,
         };
-        match TerminalExpr::accept(parser)? {
-            Some(terminal) => Ok(Some(PrefixedExpr { prefix, terminal })),
+        match PathExpr::accept(parser)? {
+            Some(expr) => Ok(Some(PrefixedExpr { prefix, expr })),
             None => Err(Diag {
                 line: parser.cur_line,
-                data: DiagData::Err(Error::MiscExpecting {
+                data: DiagData::Err(Error::Expecting {
                     expected: "an expression".to_string(),
                 }),
                 span: parser.cur_span(),
@@ -143,9 +143,93 @@ impl PrefixedExpr {
 }
 
 #[derive(Debug)]
+pub enum PathExpr {
+    Root(TerminalExpr),
+    WithFields { lhs: Box<PathExpr>, rhs: Field },
+}
+
+impl PathExpr {
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        let root = PathExpr::Root(match TerminalExpr::accept(parser)? {
+            Some(expr) => expr,
+            None => return Ok(None),
+        });
+        parser.skip_ws_if_any(false);
+        match parser.cur_lexeme.kind {
+            lexeme::Kind::Period => {
+                parser.next_non_ws_lexeme(true); // consume dot
+                let mut lhs_inner = root;
+                let mut rhs = match Field::accept(parser)? {
+                    Some(expr) => expr,
+                    None => {
+                        return Err(Diag {
+                            line: parser.cur_line,
+                            data: DiagData::Err(Error::Expecting {
+                                expected: "a terminal expression after `.`".to_string(),
+                            }),
+                            span: parser.cur_span(),
+                        });
+                    }
+                };
+                loop {
+                    parser.skip_ws_if_any(false);
+                    if !matches!(parser.cur_lexeme.kind, lexeme::Kind::Period) {
+                        break;
+                    }
+                    parser.next_non_ws_lexeme(true); // consume dot
+                    lhs_inner = PathExpr::WithFields {
+                        lhs: Box::new(lhs_inner),
+                        rhs,
+                    };
+                    rhs = match Field::accept(parser)? {
+                        Some(expr) => expr,
+                        None => {
+                            return Err(Diag {
+                                line: parser.cur_line,
+                                data: DiagData::Err(Error::Expecting {
+                                    expected: "a terminal expression after `.`".to_string(),
+                                }),
+                                span: parser.cur_span(),
+                            });
+                        }
+                    };
+                }
+                Ok(Some(PathExpr::WithFields {
+                    lhs: Box::new(lhs_inner),
+                    rhs,
+                }))
+            }
+            _ => Ok(Some(root)),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum TerminalExpr {
+    Field(Field),
     Literal(Literal),
     Tuple(TupleExpr),
+}
+
+#[derive(Debug)]
+pub struct Field {
+    pub name: Ident,
+    pub args: Option<TupleExpr>,
+}
+
+impl Field {
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        let name = match Ident::accept(parser)? {
+            Some(ident) => ident,
+            None => return Ok(None),
+        };
+        parser.skip_ws_if_any(false);
+        let args = match TupleExpr::accept(parser)? {
+            Some(tuple) => Some(tuple),
+            None => None,
+        };
+        Ok(Some(Field { name, args }))
+    }
 }
 
 #[derive(Debug)]
@@ -179,7 +263,7 @@ impl TupleExpr {
                         span: (parser.cur_pos, 1),
                     });
                 }
-                parser.next_non_ws_lexeme(true);
+                parser.next_non_ws_lexeme(false);
                 Some(TupleExpr(exprs))
             }
             _ => None,
@@ -189,7 +273,9 @@ impl TupleExpr {
 
 impl TerminalExpr {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        Ok(if let Some(lit) = Literal::accept(parser)? {
+        Ok(if let Some(field) = Field::accept(parser)? {
+            Some(TerminalExpr::Field(field))
+        } else if let Some(lit) = Literal::accept(parser)? {
             Some(TerminalExpr::Literal(lit))
         } else if let Some(tuple) = TupleExpr::accept(parser)? {
             Some(TerminalExpr::Tuple(tuple))

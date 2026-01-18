@@ -23,7 +23,7 @@ pub enum Error {
         expected: Vec<lexeme::Kind>,
         found: lexeme::Kind,
     },
-    MiscExpecting {
+    Expecting {
         expected: String,
     },
     BracketNotClosed {
@@ -56,7 +56,7 @@ impl Display for DiagData {
                         found
                     )
                 }
-                Error::MiscExpecting { expected } => {
+                Error::Expecting { expected } => {
                     write!(f, "Expecting {}", expected)
                 }
                 Error::BracketNotClosed { kind } => {

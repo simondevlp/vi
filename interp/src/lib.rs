@@ -10,15 +10,27 @@ pub mod scope;
 
 pub struct Evaluator<'a> {
     parser: Parser<'a>,
-    global: Scope<'a>,
+    scope_stack: Vec<Scope>,
 }
 
 impl<'a> Evaluator<'a> {
     pub fn new(input: &'a str) -> Self {
         Evaluator {
             parser: Parser::new(input),
-            global: Scope::new(),
+            scope_stack: vec![Scope::global()],
         }
+    }
+
+    pub fn current_scope(&self) -> &Scope {
+        self.scope_stack
+            .last()
+            .expect("There should always be a current scope")
+    }
+
+    pub fn current_scope_mut(&mut self) -> &mut Scope {
+        self.scope_stack
+            .last_mut()
+            .expect("There should always be a current scope")
     }
 
     pub fn parse(&mut self) -> Option<Programme> {
@@ -54,7 +66,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    pub fn snippet(&self, span: &Span) -> &'a str {
+    pub fn snippet(&self, span: &Span) -> String {
         self.parser.get_snippet(span)
     }
 }

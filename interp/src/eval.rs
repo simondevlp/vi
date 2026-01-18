@@ -3,21 +3,21 @@ use parser::syntax::expr;
 use crate::{
     Evaluator,
     diag::{Diag, DiagData, EvalError},
-    obj::{NumericalObj, Operation, OperationKind, TupleObj, ValueObj},
+    obj::{NumericalObj, Object, Operation, OperationKind, TupleObj},
 };
 
 pub trait Evaluable {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag>;
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag>;
 }
 
 impl Evaluable for expr::Expr {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         self.0.evaluate(eval)
     }
 }
 
 impl Evaluable for expr::AddAffixedExpr {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         match &self.lhs {
             Some(op1) => Operation {
                 kind: if self.rhs.0 {
@@ -34,7 +34,7 @@ impl Evaluable for expr::AddAffixedExpr {
 }
 
 impl Evaluable for expr::MulAffixedExpr {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         match &self.lhs {
             Some(op1) => Operation {
                 kind: if self.rhs.0 {
@@ -51,29 +51,56 @@ impl Evaluable for expr::MulAffixedExpr {
 }
 
 impl Evaluable for expr::PrefixedExpr {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         match &self.prefix {
             Some(expr::PrefixedExprKind::Minus) => Operation {
                 kind: OperationKind::NegativePrefix,
-                operands: (ValueObj::Undefined, self.terminal.evaluate(eval)?),
+                operands: (Object::Undefined, self.expr.evaluate(eval)?),
             }
             .evaluate(eval),
-            None => self.terminal.evaluate(eval),
+            None => self.expr.evaluate(eval),
+        }
+    }
+}
+
+impl Evaluable for expr::PathExpr {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
+        match self {
+            expr::PathExpr::Root(root) => root.evaluate(eval),
+            expr::PathExpr::WithFields { .. } => unimplemented!(),
         }
     }
 }
 
 impl Evaluable for expr::TerminalExpr {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         match self {
+            expr::TerminalExpr::Field(field) => field.evaluate(eval),
             expr::TerminalExpr::Literal(lit) => lit.evaluate(eval),
             expr::TerminalExpr::Tuple(lit) => lit.evaluate(eval),
         }
     }
 }
 
+impl Evaluable for expr::Field {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
+        if let Some(_) = &self.args {
+            unimplemented!()
+        } else {
+            let name = eval.parser.get_snippet(&self.name.0);
+            match eval.current_scope().get(&name) {
+                Some(obj) => Ok(obj.clone()),
+                None => Err(Diag {
+                    line: eval.cur_line(),
+                    data: DiagData::EvalError(EvalError::NotFoundInScope { name }),
+                }),
+            }
+        }
+    }
+}
+
 impl Evaluable for expr::TupleExpr {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         match self.0.len() {
             1 => Ok(self.0[0].evaluate(eval)?),
             _ => {
@@ -82,33 +109,24 @@ impl Evaluable for expr::TupleExpr {
                     let val = expr.evaluate(eval)?;
                     values.push(val);
                 }
-                Ok(ValueObj::Tuple(TupleObj(values)))
+                Ok(Object::Tuple(TupleObj(values)))
             }
         }
     }
 }
 
 impl Evaluable for expr::terminal::Literal {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         match self {
             expr::terminal::Literal::Decimal(lit) => lit.evaluate(eval),
             expr::terminal::Literal::Float(lit) => lit.evaluate(eval),
-            expr::terminal::Literal::Ident(lit) => match eval.global.get(eval.snippet(&lit.0)) {
-                Some(val) => Ok(val.clone()),
-                None => Err(Diag {
-                    line: eval.cur_line(),
-                    data: DiagData::EvalError(EvalError::NotFoundInScope {
-                        name: eval.snippet(&lit.0).to_string(),
-                    }),
-                }),
-            },
             expr::terminal::Literal::DoubleQuotedString(_) => unimplemented!(),
         }
     }
 }
 
 impl Evaluable for expr::terminal::Decimal {
-    fn evaluate(&self, eval: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, eval: &Evaluator) -> Result<Object, Diag> {
         let lit = eval.parser.get_snippet(&self.0);
         let mut value = 0f64;
         for (i, c) in lit.chars().rev().enumerate() {
@@ -125,12 +143,12 @@ impl Evaluable for expr::terminal::Decimal {
             };
             value += (digit as f64) * 10f64.powi(i as i32);
         }
-        Ok(ValueObj::Numerical(NumericalObj(value)))
+        Ok(Object::Numerical(NumericalObj(value)))
     }
 }
 
 impl Evaluable for expr::terminal::Float {
-    fn evaluate(&self, interpreter: &Evaluator) -> Result<ValueObj, Diag> {
+    fn evaluate(&self, interpreter: &Evaluator) -> Result<Object, Diag> {
         let lit = interpreter.parser.get_snippet(&self.0);
         let mut value = 0f64;
         let parts: Vec<&str> = lit.split('.').collect();
@@ -172,6 +190,6 @@ impl Evaluable for expr::terminal::Float {
             };
             value += (digit as f64) * 10f64.powi(-(i as i32 + 1));
         }
-        Ok(ValueObj::Numerical(NumericalObj(value)))
+        Ok(Object::Numerical(NumericalObj(value)))
     }
 }

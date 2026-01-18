@@ -1,4 +1,4 @@
-use lexer::lexeme::Kind;
+use lexer::lexeme;
 
 use crate::{Span, diag::Diag, parser::Parser};
 
@@ -16,7 +16,7 @@ impl Keyword {
 
     pub fn accept(parser: &mut Parser, kw: Self) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
-            Kind::Word if parser.cur_lexeme_snippet_is(kw.as_str()) => {
+            lexeme::Kind::Word if parser.cur_lexeme_snippet_is(kw.as_str()) => {
                 parser.next_non_ws_lexeme(true);
                 Some(kw)
             }
@@ -36,7 +36,6 @@ pub struct DoubleQuotedString(pub Span);
 
 #[derive(Debug)]
 pub enum Literal {
-    Ident(Ident),
     Float(Float),
     Decimal(Decimal),
     DoubleQuotedString(DoubleQuotedString),
@@ -44,9 +43,7 @@ pub enum Literal {
 
 impl Literal {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        Ok(if let Some(ident) = Ident::accept(parser)? {
-            Some(Literal::Ident(ident))
-        } else if let Some(float) = Float::accept(parser)? {
+        Ok(if let Some(float) = Float::accept(parser)? {
             Some(Literal::Float(float))
         } else if let Some(decimal) = Decimal::accept(parser)? {
             Some(Literal::Decimal(decimal))
@@ -61,14 +58,14 @@ impl Literal {
 impl Ident {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
-            Kind::Word => {
+            lexeme::Kind::Word => {
                 let start = parser.cur_pos;
                 let mut len = parser.cur_lexeme.len;
                 loop {
                     let mut added = 0;
                     let ws = parser.next_lexeme();
                     match ws.kind {
-                        Kind::WordSpaces => {
+                        lexeme::Kind::WordSpaces => {
                             added += ws.len;
                         }
                         _ => {
@@ -77,7 +74,7 @@ impl Ident {
                     };
                     let word = parser.next_lexeme();
                     match word.kind {
-                        Kind::Word => {
+                        lexeme::Kind::Word => {
                             len += word.len + added;
                         }
                         _ => {
@@ -95,7 +92,7 @@ impl Ident {
 impl Float {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
-            Kind::Float => {
+            lexeme::Kind::Float => {
                 let span = parser.cur_span();
                 parser.next_lexeme();
                 Some(Self(span))
@@ -108,7 +105,7 @@ impl Float {
 impl Decimal {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
-            Kind::Decimal => {
+            lexeme::Kind::Decimal => {
                 let span = parser.cur_span();
                 parser.next_lexeme();
                 Some(Self(span))
@@ -121,7 +118,7 @@ impl Decimal {
 impl DoubleQuotedString {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         Ok(match parser.cur_lexeme.kind {
-            Kind::String => {
+            lexeme::Kind::String => {
                 let span = parser.cur_span();
                 parser.next_lexeme();
                 Some(Self(span))
