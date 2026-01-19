@@ -11,7 +11,6 @@ impl Scope {
         let scope = Scope {
             table: HashMap::new(),
         };
-        // Populate global scope with built-in functions and variables here if needed
         scope
     }
 

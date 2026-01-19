@@ -51,7 +51,7 @@ impl Interpretable for stmt::ChoStatement {
 impl Interpretable for stmt::InStatement {
     fn interpret(&self, interpreter: &mut Evaluator) -> Result<(), Diag> {
         let expr = self.expr.evaluate(interpreter)?;
-        eprintln!("{}", expr);
+        println!("{}", expr);
         Ok(())
     }
 }
