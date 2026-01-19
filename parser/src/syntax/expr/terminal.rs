@@ -5,12 +5,14 @@ use crate::{Span, diag::Diag, parser::Parser};
 #[derive(Debug)]
 pub enum Keyword {
     Cho,
+    In,
 }
 
 impl Keyword {
     pub fn as_str(&self) -> &str {
         match self {
             Keyword::Cho => "cho",
+            Keyword::In => "in",
         }
     }
 

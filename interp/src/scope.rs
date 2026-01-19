@@ -8,7 +8,7 @@ pub struct Scope {
 
 impl Scope {
     pub fn global() -> Self {
-        let mut scope = Scope {
+        let scope = Scope {
             table: HashMap::new(),
         };
         // Populate global scope with built-in functions and variables here if needed

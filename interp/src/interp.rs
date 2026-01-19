@@ -16,6 +16,7 @@ impl Interpretable for stmt::Statement {
         match self {
             stmt::Statement::Invocation(invocation_stmt) => invocation_stmt.interpret(interpreter),
             stmt::Statement::Cho(cho_stmt) => cho_stmt.interpret(interpreter),
+            stmt::Statement::In(in_stmt) => in_stmt.interpret(interpreter),
         }
     }
 }
@@ -44,5 +45,13 @@ impl Interpretable for stmt::ChoStatement {
                 }),
             }),
         }
+    }
+}
+
+impl Interpretable for stmt::InStatement {
+    fn interpret(&self, interpreter: &mut Evaluator) -> Result<(), Diag> {
+        let expr = self.expr.evaluate(interpreter)?;
+        eprintln!("{}", expr);
+        Ok(())
     }
 }

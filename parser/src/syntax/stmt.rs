@@ -4,7 +4,7 @@ use crate::{
     diag::{Diag, DiagData, Error},
     parser::Parser,
     syntax::expr::{
-        Expr, Field,
+        Expr, Field, PathExpr,
         terminal::{Ident, Keyword},
     },
 };
@@ -13,12 +13,15 @@ use crate::{
 pub enum Statement {
     Cho(ChoStatement),
     Invocation(InvocationStatement),
+    In(InStatement),
 }
 
 impl Statement {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
         if let Some(cho_stmt) = ChoStatement::accept(parser)? {
             Ok(Some(Statement::Cho(cho_stmt)))
+        } else if let Some(in_stmt) = InStatement::accept(parser)? {
+            Ok(Some(Statement::In(in_stmt)))
         } else if let Some(invoc_stmt) = InvocationStatement::accept(parser)? {
             Ok(Some(Statement::Invocation(invoc_stmt)))
         } else {
@@ -29,14 +32,13 @@ impl Statement {
 
 #[derive(Debug)]
 pub struct ChoStatement {
-    pub kw: Keyword,
     pub lhs: Ident,
     pub rhs: Option<Expr>,
 }
 
 impl ChoStatement {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        let Some(kw) = Keyword::accept(parser, Keyword::Cho)? else {
+        let Some(_) = Keyword::accept(parser, Keyword::Cho)? else {
             return Ok(None);
         };
         let Some(lhs) = Ident::accept(parser)? else {
@@ -62,26 +64,59 @@ impl ChoStatement {
                     });
                 };
                 Some(ChoStatement {
-                    kw,
                     lhs,
                     rhs: Some(rhs),
                 })
             }
-            _ => Some(ChoStatement { kw, lhs, rhs: None }),
+            _ => Some(ChoStatement { lhs, rhs: None }),
         })
     }
 }
 
 #[derive(Debug)]
 pub struct InvocationStatement {
-    pub path: Field,
+    pub path: PathExpr,
 }
 
 impl InvocationStatement {
     pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
-        match Field::accept(parser)? {
-            Some(path) => Ok(Some(InvocationStatement { path })),
-            None => Ok(None),
+        let Some(path) = PathExpr::accept(parser)? else {
+            return Ok(None);
+        };
+        match path {
+            PathExpr::WithFields {
+                lhs: _,
+                rhs:
+                    Field {
+                        name: _,
+                        args: Some(_),
+                    },
+            } => Ok(Some(InvocationStatement { path })),
+            _ => Ok(None),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct InStatement {
+    pub expr: Expr,
+}
+
+impl InStatement {
+    pub fn accept(parser: &mut Parser) -> Result<Option<Self>, Diag> {
+        let Some(_) = Keyword::accept(parser, Keyword::In)? else {
+            return Ok(None);
+        };
+        parser.skip_ws_if_any(true);
+        match Expr::accept(parser)? {
+            Some(expr) => Ok(Some(InStatement { expr })),
+            None => Err(Diag {
+                line: parser.cur_line,
+                span: parser.cur_span(),
+                data: DiagData::Err(Error::Expecting {
+                    expected: "an expression to print".to_string(),
+                }),
+            }),
         }
     }
 }

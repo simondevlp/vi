@@ -1,4 +1,10 @@
-use crate::{diag::Diag, parser::Parser, syntax::stmt::Statement};
+use lexer::lexeme;
+
+use crate::{
+    diag::{Diag, DiagData, Error},
+    parser::Parser,
+    syntax::stmt::Statement,
+};
 
 pub mod expr;
 pub mod stmt;
@@ -19,6 +25,16 @@ impl Programme {
                 break;
             }
         }
-        Ok(Programme { statements })
+        parser.skip_ws_if_any(true);
+        match parser.cur_lexeme.kind {
+            lexeme::Kind::Eof => Ok(Programme { statements }),
+            _ => Err(Diag {
+                line: parser.cur_line,
+                span: parser.cur_span(),
+                data: DiagData::Err(Error::Expecting {
+                    expected: "end of file".to_string(),
+                }),
+            }),
+        }
     }
 }
